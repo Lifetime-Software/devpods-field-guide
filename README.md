@@ -106,6 +106,8 @@ The encrypted snapshot contains:
 - SSH authorization and the portable Tailscale workstation identity.
 
 Package and build caches persist only on the current host and are not uploaded.
+Project `.venv` directories are also omitted because they contain
+image-specific interpreters and are recreated from dependency manifests.
 Running processes, development servers, and tmux sessions stop with the
 container. System changes made outside persistent directories disappear on an
 image rebuild; permanent base packages belong in the Dockerfile.
