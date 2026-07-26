@@ -111,9 +111,12 @@ The encrypted snapshot contains:
 Package and build caches persist only on the current host and are not uploaded.
 Project `.venv` directories are also omitted because they contain
 image-specific interpreters and are recreated from dependency manifests.
-Running processes, development servers, and tmux sessions stop with the
-container. System changes made outside persistent directories disappear on an
-image rebuild; permanent base packages belong in the Dockerfile.
+Running processes and development servers stop with the container. Tmux
+sessions are saved as restorable tabs, panes, layouts, working directories, and
+history; Codex and Claude panes reopen their saved-conversation pickers when
+tmux starts again. This is workspace reconstruction, not process-memory
+checkpointing. System changes made outside persistent directories disappear on
+an image rebuild; permanent base packages belong in the Dockerfile.
 
 Git repositories still need their ordinary remotes. The encrypted snapshot
 protects uncommitted workstation state but does not replace normal Git pushes.
