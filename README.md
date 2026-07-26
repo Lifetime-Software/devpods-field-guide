@@ -71,6 +71,7 @@ Requirements:
 - the host is connected to Tailscale;
 - Docker Desktop is running;
 - the one-time restricted phone-start installer was completed;
+- the Windows GitHub CLI login captured by that installer is still valid;
 - the phone is connected to Tailscale and has its authorized SSH key.
 
 First ask the host to activate DevPods:
@@ -80,7 +81,9 @@ ssh <windows-user>@<windows-host>
 ```
 
 That key is restricted to the activation helper and does not open a general
-Windows shell. When it reports ready, connect to the workstation:
+Windows shell. The installer protects the host's activation credential with
+Windows DPAPI because an SSH network logon cannot use the interactive desktop's
+credential-manager session. When it reports ready, connect to the workstation:
 
 ```text
 ssh dev@devpods
