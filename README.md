@@ -63,6 +63,12 @@ From any device connected to the same Tailscale network:
 ssh dev@devpods
 ```
 
+After connecting, start or reattach the persistent terminal workspace:
+
+```text
+tmux new-session -A -s main
+```
+
 ## Starting It from a Phone
 
 Requirements:
