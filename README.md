@@ -38,11 +38,13 @@ trusted host
 ```
 
 Activation acquires the global lease, restores a newer encrypted snapshot,
-starts the workstation, verifies health, and starts the idle monitor.
+starts the workstation, verifies health, and waits for the idle monitor's first
+heartbeat. Running activation again on the same active host safely repairs a
+missing or stale monitor without restoring over local work.
 
-Deactivation encrypts and uploads the latest state, verifies the remote asset,
-stops the workstation, and releases the lease. If synchronization cannot be
-verified, normal shutdown is cancelled.
+Deactivation encrypts and uploads the latest state, verifies every remote
+snapshot chunk, stops the workstation, and releases the lease. If
+synchronization cannot be verified, normal shutdown is cancelled.
 
 ## Everyday Commands
 
@@ -89,7 +91,9 @@ ssh <windows-user>@<windows-host>
 That key is restricted to the activation helper and does not open a general
 Windows shell. The installer protects the host's activation credential with
 Windows DPAPI because an SSH network logon cannot use the interactive desktop's
-credential-manager session. When it reports ready, connect to the workstation:
+credential-manager session. The helper also repairs and verifies the idle
+monitor when the container was already running. When it reports ready, connect
+to the workstation:
 
 ```text
 ssh dev@devpods
@@ -104,6 +108,23 @@ ssh <windows-user>@<windows-host> && ssh dev@devpods
 This cannot start a powered-off or sleeping PC. Wake-on-LAN, an always-on home
 device, or a cloud host is required for that situation.
 
+## Automatic Idle Shutdown
+
+The active workstation normally deactivates after two hours without meaningful
+development activity and gives a five-minute warning first. Terminal input,
+completed shell commands, and Claude or Codex input/output reset the timer.
+Merely leaving a terminal attached or a background process using CPU does not.
+
+For deliberate unattended work, extend the deadline before starting it:
+
+```text
+devpods keepalive 6h
+```
+
+The idle monitor synchronizes and verifies the encrypted snapshot before it
+stops the workstation. A failed sync cancels shutdown, so unsaved portable state
+is not discarded just to satisfy the idle timer.
+
 ## What Persists
 
 The encrypted snapshot contains:
@@ -115,8 +136,10 @@ The encrypted snapshot contains:
 - SSH authorization and the portable Tailscale workstation identity.
 
 Package and build caches persist only on the current host and are not uploaded.
-Project `.venv` directories are also omitted because they contain
-image-specific interpreters and are recreated from dependency manifests.
+Project `.venv` and `node_modules` directories are also omitted because they
+contain regenerable, image-specific dependencies and are recreated from
+dependency manifests. Large encrypted snapshots are split into independently
+verified chunks below the remote service's per-file size limit.
 Running processes and development servers stop with the container. Tmux
 sessions are saved as restorable tabs, panes, layouts, working directories, and
 history; Codex and Claude panes reopen their saved-conversation pickers when
@@ -182,6 +205,13 @@ Then inspect the local DevPods monitor log and verify:
 - the recovery identity exists;
 - the active host has not lost its lease.
 
+If the container is running locally but the lease or monitor is stale, run
+`devpods activate`. It repairs and verifies the monitor in place without
+restoring remote state over local work. If phone activation reports a GitHub
+login failure, run `gh auth login` in the signed-in Windows session and rerun
+the restricted phone-start installer; never paste a token into the phone
+session.
+
 For a changed SSH fingerprint, verify the expected host and fingerprint before
 removing a saved entry. For `Permission denied (publickey)`, install the client
 device's public key through the documented setup flow; never share its private
@@ -191,7 +221,9 @@ key.
 
 A lightweight repository-scoped GitHub Actions runner may run on a trusted host
 outside the DevPods container. It can continue quality checks, cloud cleanup,
-and publication of this guide while the workstation container is inactive.
+and publication of this guide while the workstation container is inactive. On
+Windows, the scheduled guide publisher launches hidden and polls the private
+repository's main branch for an updated privacy-checked guide.
 
 The runner is available only while its host is awake and online. Workflow code
 executes on that host, so it must remain restricted to trusted private
