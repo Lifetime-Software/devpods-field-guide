@@ -85,15 +85,16 @@ Requirements:
 First ask the host to activate DevPods:
 
 ```text
-ssh <windows-user>@<windows-host>
+ssh -T <windows-user>@<windows-host>
 ```
 
 That key is restricted to the activation helper and does not open a general
 Windows shell. The installer protects the host's activation credential with
 Windows DPAPI because an SSH network logon cannot use the interactive desktop's
 credential-manager session. The helper also repairs and verifies the idle
-monitor when the container was already running. When it reports ready, connect
-to the workstation:
+monitor when the container was already running. A Windows scheduled task owns
+the monitor independently of the short phone SSH session. When it reports
+ready, connect to the workstation:
 
 ```text
 ssh dev@devpods
@@ -102,11 +103,15 @@ ssh dev@devpods
 The two commands may be combined:
 
 ```text
-ssh <windows-user>@<windows-host> && ssh dev@devpods
+ssh -T <windows-user>@<windows-host> && ssh dev@devpods
 ```
 
 This cannot start a powered-off or sleeping PC. Wake-on-LAN, an always-on home
 device, or a cloud host is required for that situation.
+
+A phone OpenSSH warning about a missing post-quantum key exchange is not an
+activation error. Treat upgrading the Windows SSH server as separate hardening;
+do not weaken authentication or expose port 22 publicly to silence it.
 
 ## Automatic Idle Shutdown
 
@@ -124,6 +129,12 @@ devpods keepalive 6h
 The idle monitor synchronizes and verifies the encrypted snapshot before it
 stops the workstation. A failed sync cancels shutdown, so unsaved portable state
 is not discarded just to satisfy the idle timer.
+
+Backup, activation, refresh, and shutdown are mutually exclusive lifecycle
+operations. A backup briefly pauses the container for a consistent archive. If
+its process is interrupted, the lock is released and the next activation safely
+resumes the orphaned pause before reporting health. Activation also removes
+recognized abandoned private staging left by the interrupted operation.
 
 ## What Persists
 
@@ -211,6 +222,10 @@ restoring remote state over local work. If phone activation reports a GitHub
 login failure, run `gh auth login` in the signed-in Windows session and rerun
 the restricted phone-start installer; never paste a token into the phone
 session.
+
+If an abrupt disconnection leaves an Android terminal printing fragments such
+as `64;36;42M` when the screen is touched, run `reset` locally. Those fragments
+are mouse-reporting sequences from the terminal, not DevPods commands.
 
 For a changed SSH fingerprint, verify the expected host and fingerprint before
 removing a saved entry. For `Permission denied (publickey)`, install the client
